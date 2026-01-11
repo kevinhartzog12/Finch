@@ -201,3 +201,14 @@ export default function App() {
                   <label className="text-sm font-bold text-slate-700 uppercase">Rationale</label>
                   <textarea className="w-full border border-slate-200 p-4 rounded-2xl" rows="5" value={rationale} onChange={(e) => setRationale(e.target.value)} required />
                 </div>
+                <button type="submit" disabled={isSubmitting} className="w-full bg-indigo-600 text-white py-5 rounded-2xl font-black shadow-xl">
+                  {isSubmitting ? 'Writing to Cloud...' : 'Stake 100 PRXY'}
+                </button>
+              </form>
+            )}
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}
