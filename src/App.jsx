@@ -20,12 +20,12 @@ import {
 
 // --- PASTE YOUR ACTUAL FIREBASE CONFIG HERE ---
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyCmVG2AVfpZ_b7FdIRcFODHTadQUPXApqo",
+  authDomain: "finch-platform.firebaseapp.com",
+  projectId: "finch-platform",
+  storageBucket: "finch-platform.firebasestorage.app",
+  messagingSenderId: "791724581520",
+  appId: "1:791724581520:web:bbce4bde4a87da6c2bae15"
 };
 
 // Initialize Firebase
