@@ -88,17 +88,8 @@ export default function App() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   
-// 1. Imports at the top
-// 2. Firebase Config & Initialization (db)
-export default function App() {
-  // 3. STATE variables go first (useState)
-  const [view, setView] = useState('dashboard');
-  const [myPredictions, setMyPredictions] = useState([]);
-  // ... other state variables
-
-  // 4. THE USEEFFECT GOES HERE
-  // It should be right after your state declarations
-  useEffect(() => {
+useEffect(() => {
+    // This creates a "live link" to your database
     const q = query(collection(db, "predictions"), orderBy("createdAt", "desc"));
     
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -106,6 +97,7 @@ export default function App() {
       querySnapshot.forEach((doc) => {
         preds.push({ id: doc.id, ...doc.data() });
       });
+      // This saves the cloud data into your app's memory
       setMyPredictions(preds);
       setBalance(1000 - (preds.length * 100));
     }, (error) => {
@@ -113,21 +105,9 @@ export default function App() {
     });
 
     return () => unsubscribe();
-  }, []); // The empty brackets mean: "Run this once when the app opens"
+  }, []);
 
-  // 5. OTHER FUNCTIONS (like handleConnect or submitAnalysis)
-  const handleConnect = () => { ... };
-  const submitAnalysis = async (e) => { ... };
-
-  // 6. THE RETURN STATEMENT (the UI)
-  return (
-    <div>
-      {/* Your UI code */}
-    </div>
-  );
-}
-
-
+  
   // Local state for user's predictions
   const [myPredictions, setMyPredictions] = useState([]);
 
