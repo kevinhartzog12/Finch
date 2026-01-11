@@ -14,6 +14,15 @@ import {
   LayoutDashboard
 } from 'lucide-react';
 
+import { 
+  getFirestore, 
+  collection, 
+  addDoc, 
+  query, 
+  orderBy,
+  onSnapshot 
+} from "firebase/firestore";
+
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
 // TODO: Add SDKs for Firebase products that you want to use
@@ -79,6 +88,46 @@ export default function App() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   
+// 1. Imports at the top
+// 2. Firebase Config & Initialization (db)
+export default function App() {
+  // 3. STATE variables go first (useState)
+  const [view, setView] = useState('dashboard');
+  const [myPredictions, setMyPredictions] = useState([]);
+  // ... other state variables
+
+  // 4. THE USEEFFECT GOES HERE
+  // It should be right after your state declarations
+  useEffect(() => {
+    const q = query(collection(db, "predictions"), orderBy("createdAt", "desc"));
+    
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const preds = [];
+      querySnapshot.forEach((doc) => {
+        preds.push({ id: doc.id, ...doc.data() });
+      });
+      setMyPredictions(preds);
+      setBalance(1000 - (preds.length * 100));
+    }, (error) => {
+      console.error("Firestore Listen Error:", error);
+    });
+
+    return () => unsubscribe();
+  }, []); // The empty brackets mean: "Run this once when the app opens"
+
+  // 5. OTHER FUNCTIONS (like handleConnect or submitAnalysis)
+  const handleConnect = () => { ... };
+  const submitAnalysis = async (e) => { ... };
+
+  // 6. THE RETURN STATEMENT (the UI)
+  return (
+    <div>
+      {/* Your UI code */}
+    </div>
+  );
+}
+
+
   // Local state for user's predictions
   const [myPredictions, setMyPredictions] = useState([]);
 
@@ -97,33 +146,28 @@ export default function App() {
     setRationale("");
   };
 
-  const submitAnalysis = (e) => {
+  const submitAnalysis = async (e) => {
     e.preventDefault();
-    if (balance < 100) {
-      alert("Insufficient PRXY balance to stake.");
-      return;
-    }
-
     setIsSubmitting(true);
     
-    // Simulate Blockchain transaction
-    setTimeout(() => {
-      const newPrediction = {
-        id: Date.now(),
+    try {
+      // This line sends the data to your "predictions" collection in Firebase
+      await addDoc(collection(db, "predictions"), {
         company: selectedVote.company,
         proposal: selectedVote.proposal,
-        forecast: forecast,
+        forecast: Number(forecast),
         rationale: rationale,
         staked: 100,
-        date: new Date().toLocaleDateString(),
+        createdAt: new Date().toISOString(),
         status: 'Pending Outcome'
-      };
+      });
 
-      setMyPredictions([newPrediction, ...myPredictions]);
-      setBalance(prev => prev - 100); // Deduct balance
       setIsSubmitting(false);
       setSuccess(true);
-    }, 1500);
+    } catch (error) {
+      console.error("Database Error:", error);
+      setIsSubmitting(false);
+    }
   };
 
   return (
