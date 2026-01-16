@@ -104,35 +104,6 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  <div className="flex items-center gap-4">
-  {currentUser ? (
-    <div className="flex items-center gap-3">
-      <span className="text-sm font-bold text-slate-600">@{currentUser}</span>
-      <button 
-        onClick={() => { setCurrentUser(null); setBalance(0); }} 
-        className="px-4 py-2 rounded-full text-xs font-bold bg-slate-100 text-slate-400 hover:text-red-500 transition-all"
-      >
-        Logout
-      </button>
-    </div>
-  ) : (
-    <>
-      <button 
-        onClick={() => { setAuthMode('login'); setAuthError(""); }}
-        className="text-sm font-bold text-slate-600 hover:text-indigo-600"
-      >
-        Login
-      </button>
-      <button 
-        onClick={() => { setAuthMode('signup'); setAuthError(""); }}
-        className="px-5 py-2.5 rounded-full text-sm font-bold bg-slate-900 text-white hover:bg-slate-800 transition-all"
-      >
-        Sign Up
-      </button>
-    </>
-  )}
-</div>
-
   const submitAnalysis = async (e) => {
     e.preventDefault();
     if (!wallet || balance < 100) return;
@@ -176,9 +147,35 @@ export default function App() {
               <History className="w-4 h-4" /> History
             </button>
           </div>
-          <button onClick={handleConnect} className={`px-5 py-2.5 rounded-full text-sm font-bold transition-all ${wallet ? 'bg-slate-100 text-slate-600 border border-slate-200' : 'bg-slate-900 text-white hover:bg-slate-800'}`}>
-            {wallet ? '0x71C7...976F' : 'Connect Wallet'}
-          </button>
+           <div className="flex items-center gap-4">
+  {currentUser ? (
+    <div className="flex items-center gap-3">
+      <span className="text-sm font-bold text-slate-600">@{currentUser}</span>
+      <button 
+        onClick={() => { setCurrentUser(null); setBalance(0); }} 
+        className="px-4 py-2 rounded-full text-xs font-bold bg-slate-100 text-slate-400 hover:text-red-500 transition-all"
+      >
+        Logout
+      </button>
+    </div>
+  ) : (
+    <>
+      <button 
+        onClick={() => { setAuthMode('login'); setAuthError(""); }}
+        className="text-sm font-bold text-slate-600 hover:text-indigo-600"
+      >
+        Login
+      </button>
+      <button 
+        onClick={() => { setAuthMode('signup'); setAuthError(""); }}
+        className="px-5 py-2.5 rounded-full text-sm font-bold bg-slate-900 text-white hover:bg-slate-800 transition-all"
+      >
+        Sign Up
+      </button>
+    </>
+  )}
+</div>
+
         </div>
       </nav>
 
