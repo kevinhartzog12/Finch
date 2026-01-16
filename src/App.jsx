@@ -1,22 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { initializeApp } from "firebase/app";
-import { 
-  getFirestore, 
-  collection, 
-  addDoc, 
-  query, 
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  query,
   orderBy,
   onSnapshot,
   doc,
   getDoc,
-  setDoc 
+  setDoc
 } from "firebase/firestore";
-import { 
-  Gavel, 
-  Wallet, 
-  ChevronLeft, 
-  User, 
-  CheckCircle2, 
+import {
+  Gavel,
+  Wallet,
+  ChevronLeft,
+  User,
+  CheckCircle2,
   TrendingUp,
   Award,
   BarChart3,
@@ -42,26 +42,26 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 const MOCK_VOTES = [
-  { 
-    id: 1, 
-    company: "MegaCorp Inc.", 
-    proposal: "Spin-off Cloud Division", 
-    description: "Shareholder proposal to separate the high-growth Cloud entity to unlock value and streamline core operations.", 
-    currentProbability: 32 
+  {
+    id: 1,
+    company: "MegaCorp Inc.",
+    proposal: "Spin-off Cloud Division",
+    description: "Shareholder proposal to separate the high-growth Cloud entity to unlock value and streamline core operations.",
+    currentProbability: 32
   },
-  { 
-    id: 2, 
-    company: "EcoEnergy Ltd.", 
-    proposal: "Appoint ESG Specialist", 
-    description: "Activist investor seeking to place a climate-risk expert on the board to oversee transition strategy.", 
-    currentProbability: 68 
+  {
+    id: 2,
+    company: "EcoEnergy Ltd.",
+    proposal: "Appoint ESG Specialist",
+    description: "Activist investor seeking to place a climate-risk expert on the board to oversee transition strategy.",
+    currentProbability: 68
   },
-  { 
-    id: 3, 
-    company: "TechGiant Co.", 
-    proposal: "Executive Clawback Policy", 
-    description: "Mandate recovery of executive bonuses in the event of material financial restatements or misconduct.", 
-    currentProbability: 45 
+  {
+    id: 3,
+    company: "TechGiant Co.",
+    proposal: "Executive Clawback Policy",
+    description: "Mandate recovery of executive bonuses in the event of material financial restatements or misconduct.",
+    currentProbability: 45
   }
 ];
 
@@ -89,14 +89,13 @@ export default function App() {
   // FETCH DATA FROM FIREBASE (REAL-TIME)
   useEffect(() => {
     const q = query(collection(db, "predictions"), orderBy("createdAt", "desc"));
-    
+
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const preds = [];
       querySnapshot.forEach((doc) => {
         preds.push({ id: doc.id, ...doc.data() });
       });
       setMyPredictions(preds);
-      setBalance(1000 - (preds.length * 100));
     }, (error) => {
       console.error("Firestore Listen Error:", error);
     });
@@ -104,7 +103,7 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-const handleAuth = async (e) => {
+  const handleAuth = async (e) => {
     e.preventDefault();
     setAuthError("");
     const userRef = doc(db, "users", authInput.toLowerCase());
@@ -142,11 +141,23 @@ const handleAuth = async (e) => {
 
   const submitAnalysis = async (e) => {
     e.preventDefault();
-    if (!wallet || balance < 100) return;
+
+    // Check for user and funds
+    if (!currentUser) {
+      alert("Please login to stake.");
+      return;
+    }
+    if (balance < 100) {
+      alert("Insufficient funds! You need at least 100 PRXY.");
+      return;
+    }
+
     setIsSubmitting(true);
-    
+
     try {
+      // 1. Record the prediction
       await addDoc(collection(db, "predictions"), {
+        username: currentUser, // Track who made it
         company: selectedVote.company,
         proposal: selectedVote.proposal,
         forecast: Number(forecast),
@@ -155,11 +166,20 @@ const handleAuth = async (e) => {
         createdAt: new Date().toISOString(),
         status: 'Pending Outcome'
       });
+
+      // 2. Deduct 100 PRXY from the "Bank of Finch"
+      const userRef = doc(db, "users", currentUser);
+      const newBalance = balance - 100;
+      await setDoc(userRef, { balance: newBalance }, { merge: true });
+
+      // 3. Update local state
+      setBalance(newBalance);
       setIsSubmitting(false);
       setSuccess(true);
     } catch (error) {
       console.error("Database Error:", error);
       setIsSubmitting(false);
+      alert("Error processing stake. Try again.");
     }
   };
 
@@ -170,7 +190,7 @@ const handleAuth = async (e) => {
           <div className="bg-indigo-600 p-2 rounded-lg"><Gavel className="text-white w-5 h-5" /></div>
           <span className="text-xl font-black tracking-tight">Finch</span>
         </div>
-        
+
         <div className="flex items-center gap-8">
           <div className="flex gap-6 text-sm font-bold uppercase tracking-widest">
             <button onClick={() => setView('dashboard')} className={`flex items-center gap-1.5 transition-colors ${view === 'dashboard' ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}>
@@ -183,80 +203,80 @@ const handleAuth = async (e) => {
               <History className="w-4 h-4" /> History
             </button>
           </div>
-           <div className="flex items-center gap-4">
-  {currentUser ? (
-    <div className="flex items-center gap-3">
-      <span className="text-sm font-bold text-slate-600">@{currentUser}</span>
-      <button 
-        onClick={() => { setCurrentUser(null); setBalance(0); }} 
-        className="px-4 py-2 rounded-full text-xs font-bold bg-slate-100 text-slate-400 hover:text-red-500 transition-all"
-      >
-        Logout
-      </button>
-    </div>
-  ) : (
-    <>
-      <button 
-        onClick={() => { setAuthMode('login'); setAuthError(""); }}
-        className="text-sm font-bold text-slate-600 hover:text-indigo-600"
-      >
-        Login
-      </button>
-      <button 
-        onClick={() => { setAuthMode('signup'); setAuthError(""); }}
-        className="px-5 py-2.5 rounded-full text-sm font-bold bg-slate-900 text-white hover:bg-slate-800 transition-all"
-      >
-        Sign Up
-      </button>
-    </>
-  )}
-</div>
+          <div className="flex items-center gap-4">
+            {currentUser ? (
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-bold text-slate-600">@{currentUser}</span>
+                <button
+                  onClick={() => { setCurrentUser(null); setBalance(0); }}
+                  className="px-4 py-2 rounded-full text-xs font-bold bg-slate-100 text-slate-400 hover:text-red-500 transition-all"
+                >
+                  Logout
+                </button>
+              </div>
+            ) : (
+              <>
+                <button
+                  onClick={() => { setAuthMode('login'); setAuthError(""); }}
+                  className="text-sm font-bold text-slate-600 hover:text-indigo-600"
+                >
+                  Login
+                </button>
+                <button
+                  onClick={() => { setAuthMode('signup'); setAuthError(""); }}
+                  className="px-5 py-2.5 rounded-full text-sm font-bold bg-slate-900 text-white hover:bg-slate-800 transition-all"
+                >
+                  Sign Up
+                </button>
+              </>
+            )}
+          </div>
 
         </div>
       </nav>
 
       {/* AUTH MODAL POPUP */}
-{authMode && (
-  <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-6">
-    <div className="bg-white rounded-[3rem] p-12 max-w-md w-full shadow-2xl relative">
-      <h2 className="text-3xl font-black mb-2">
-        {authMode === 'login' ? 'Welcome Back' : 'Create Account'}
-      </h2>
-      <p className="text-slate-500 mb-8">
-        {authMode === 'login' ? 'Enter your username to sync.' : 'Pick a username to get 1,000 PRXY.'}
-      </p>
-      
-      <form onSubmit={handleAuth} className="space-y-4">
-        <input 
-          autoFocus
-          className="w-full border-2 border-slate-100 p-5 rounded-2xl outline-none focus:border-indigo-500 transition-all font-bold text-lg"
-          placeholder="Username"
-          value={authInput}
-          onChange={(e) => setAuthInput(e.target.value)}
-          required
-        />
-        
-        {authError && (
-          <p className="text-red-500 text-sm font-bold px-2 italic">
-            {authError}
-          </p>
-        )}
+      {authMode && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-6">
+          <div className="bg-white rounded-[3rem] p-12 max-w-md w-full shadow-2xl relative">
+            <h2 className="text-3xl font-black mb-2">
+              {authMode === 'login' ? 'Welcome Back' : 'Create Account'}
+            </h2>
+            <p className="text-slate-500 mb-8">
+              {authMode === 'login' ? 'Enter your username to sync.' : 'Pick a username to get 1,000 PRXY.'}
+            </p>
 
-        <button type="submit" className="w-full bg-indigo-600 text-white py-5 rounded-2xl font-black text-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200">
-          {authMode === 'login' ? 'Login' : 'Claim 1,000 PRXY'}
-        </button>
-        
-        <button 
-          type="button" 
-          onClick={() => setAuthMode(null)} 
-          className="w-full text-slate-400 font-bold text-sm hover:text-slate-600 transition-colors"
-        >
-          Cancel
-        </button>
-      </form>
-    </div>
-  </div>
-)}
+            <form onSubmit={handleAuth} className="space-y-4">
+              <input
+                autoFocus
+                className="w-full border-2 border-slate-100 p-5 rounded-2xl outline-none focus:border-indigo-500 transition-all font-bold text-lg"
+                placeholder="Username"
+                value={authInput}
+                onChange={(e) => setAuthInput(e.target.value)}
+                required
+              />
+
+              {authError && (
+                <p className="text-red-500 text-sm font-bold px-2 italic">
+                  {authError}
+                </p>
+              )}
+
+              <button type="submit" className="w-full bg-indigo-600 text-white py-5 rounded-2xl font-black text-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200">
+                {authMode === 'login' ? 'Login' : 'Claim 1,000 PRXY'}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setAuthMode(null)}
+                className="w-full text-slate-400 font-bold text-sm hover:text-slate-600 transition-colors"
+              >
+                Cancel
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
 
       <main className="max-w-7xl mx-auto px-6 py-12">
         {view === 'dashboard' && (
@@ -294,7 +314,8 @@ const handleAuth = async (e) => {
                 </h4>
                 <div className="space-y-6 relative z-10">
                   <div className="flex items-end gap-2">
-                    <span className="text-6xl font-black">{wallet ? balance : '—'}</span>
+                    {/* Changed wallet to currentUser */}
+                    <span className="text-6xl font-black">{currentUser ? balance : '—'}</span>
                     <span className="text-indigo-200 font-black mb-2 uppercase text-[10px] tracking-[0.3em]">PRXY</span>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
@@ -302,14 +323,14 @@ const handleAuth = async (e) => {
                       <p className="text-[10px] text-indigo-200 uppercase font-black mb-1 tracking-tighter">My Rank</p>
                       <div className="flex items-center gap-2">
                         <Award className="w-4 h-4 text-amber-300" />
-                        <p className="text-xl font-bold">{wallet ? '#42' : 'N/A'}</p>
+                        <p className="text-xl font-bold">{currentUser ? '#42' : 'N/A'}</p>
                       </div>
                     </div>
                     <div className="bg-white/10 p-4 rounded-2xl backdrop-blur-md border border-white/10">
                       <p className="text-[10px] text-indigo-200 uppercase font-black mb-1 tracking-tighter">Accuracy</p>
                       <div className="flex items-center gap-2">
                         <TrendingUp className="w-4 h-4 text-emerald-300" />
-                        <p className="text-xl font-bold">{wallet ? '74%' : '—'}</p>
+                        <p className="text-xl font-bold">{currentUser ? '74%' : '—'}</p>
                       </div>
                     </div>
                   </div>
@@ -379,7 +400,7 @@ const handleAuth = async (e) => {
             <button onClick={() => setView('dashboard')} className="mb-10 flex items-center gap-2 font-black text-slate-300 hover:text-indigo-600 transition-all uppercase text-[10px] tracking-widest">
               <ChevronLeft className="w-4 h-4" /> Cancel Submission
             </button>
-            
+
             {success ? (
               <div className="text-center bg-white p-20 rounded-[4rem] border border-slate-200 shadow-2xl">
                 <h2 className="text-4xl font-black mb-4">Confirmed</h2>
@@ -387,10 +408,10 @@ const handleAuth = async (e) => {
               </div>
             ) : (
               <form onSubmit={submitAnalysis} className="bg-white border border-slate-200 p-12 rounded-[3.5rem] shadow-sm space-y-12">
-                {!wallet && (
+                {!currentUser && (
                   <div className="bg-amber-50 border border-amber-100 p-6 rounded-[2rem] flex gap-4 items-center">
-                    <Wallet className="text-amber-500 w-8 h-8" />
-                    <p className="text-amber-900 font-bold">Wallet Connection Required to Stake</p>
+                    <User className="text-amber-500 w-8 h-8" />
+                    <p className="text-amber-900 font-bold">Please Login to Stake</p>
                   </div>
                 )}
                 <h2 className="text-4xl font-black mb-2">{selectedVote.company}</h2>
@@ -399,7 +420,7 @@ const handleAuth = async (e) => {
                   <input type="range" className="w-full h-2.5 bg-slate-100 rounded-full appearance-none cursor-pointer accent-indigo-600" value={forecast} onChange={(e) => setForecast(e.target.value)} />
                 </div>
                 <textarea className="w-full border border-slate-200 p-8 rounded-[2.5rem] outline-none focus:border-indigo-500 transition-all text-lg leading-relaxed min-h-[200px]" value={rationale} onChange={(e) => setRationale(e.target.value)} placeholder="Provide your thesis..." required />
-                <button type="submit" disabled={isSubmitting || !wallet} className="w-full bg-slate-900 text-white py-7 rounded-[2.5rem] font-black text-2xl hover:bg-indigo-600 transition-all disabled:bg-slate-200 shadow-xl">
+                <button type="submit" disabled={isSubmitting || !currentUser} className="w-full bg-slate-900 text-white py-7 rounded-[2.5rem] font-black text-2xl hover:bg-indigo-600 transition-all disabled:bg-slate-200 shadow-xl">
                   {isSubmitting ? 'Syncing...' : 'Stake 100 PRXY'}
                 </button>
               </form>
