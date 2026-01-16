@@ -215,6 +215,49 @@ const handleAuth = async (e) => {
         </div>
       </nav>
 
+      {/* AUTH MODAL POPUP */}
+{authMode && (
+  <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-6">
+    <div className="bg-white rounded-[3rem] p-12 max-w-md w-full shadow-2xl relative">
+      <h2 className="text-3xl font-black mb-2">
+        {authMode === 'login' ? 'Welcome Back' : 'Create Account'}
+      </h2>
+      <p className="text-slate-500 mb-8">
+        {authMode === 'login' ? 'Enter your username to sync.' : 'Pick a username to get 1,000 PRXY.'}
+      </p>
+      
+      <form onSubmit={handleAuth} className="space-y-4">
+        <input 
+          autoFocus
+          className="w-full border-2 border-slate-100 p-5 rounded-2xl outline-none focus:border-indigo-500 transition-all font-bold text-lg"
+          placeholder="Username"
+          value={authInput}
+          onChange={(e) => setAuthInput(e.target.value)}
+          required
+        />
+        
+        {authError && (
+          <p className="text-red-500 text-sm font-bold px-2 italic">
+            {authError}
+          </p>
+        )}
+
+        <button type="submit" className="w-full bg-indigo-600 text-white py-5 rounded-2xl font-black text-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200">
+          {authMode === 'login' ? 'Login' : 'Claim 1,000 PRXY'}
+        </button>
+        
+        <button 
+          type="button" 
+          onClick={() => setAuthMode(null)} 
+          className="w-full text-slate-400 font-bold text-sm hover:text-slate-600 transition-colors"
+        >
+          Cancel
+        </button>
+      </form>
+    </div>
+  </div>
+)}
+
       <main className="max-w-7xl mx-auto px-6 py-12">
         {view === 'dashboard' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
