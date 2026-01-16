@@ -88,12 +88,26 @@ export default function App() {
 
   // FETCH DATA FROM FIREBASE (REAL-TIME)
   useEffect(() => {
-    const q = query(collection(db, "predictions"), orderBy("createdAt", "desc"));
+    // Only fetch if someone is logged in
+    if (!currentUser) {
+      setMyPredictions([]);
+      return;
+    }
+
+    // New query: Filter by the logged-in username
+    const q = query(
+      collection(db, "predictions"),
+      orderBy("createdAt", "desc")
+    );
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const preds = [];
       querySnapshot.forEach((doc) => {
-        preds.push({ id: doc.id, ...doc.data() });
+        const data = doc.data();
+        // Only add to the list if the username matches
+        if (data.username === currentUser) {
+          preds.push({ id: doc.id, ...data });
+        }
       });
       setMyPredictions(preds);
     }, (error) => {
@@ -101,7 +115,7 @@ export default function App() {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [currentUser]); // Added currentUser here so it re-runs when you switch users
 
   const handleAuth = async (e) => {
     e.preventDefault();
@@ -200,7 +214,7 @@ export default function App() {
               <Trophy className="w-4 h-4" /> Leaders
             </button>
             <button onClick={() => setView('history')} className={`flex items-center gap-1.5 transition-colors ${view === 'history' ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}>
-              <History className="w-4 h-4" /> History
+              <History className="w-4 h-4" /> Reports
             </button>
           </div>
           <div className="flex items-center gap-4">
@@ -372,10 +386,10 @@ export default function App() {
 
         {view === 'history' && (
           <div className="max-w-2xl mx-auto space-y-8">
-            <h1 className="text-4xl font-black tracking-tight">Vault</h1>
+            <h1 className="text-4xl font-black tracking-tight">Predictions/Analysis Reports</h1>
             {myPredictions.length === 0 ? (
               <div className="text-center p-24 bg-white border-4 border-dashed border-slate-100 rounded-[3rem] text-slate-300">
-                <p className="font-bold text-lg">The vault is empty.</p>
+                <p className="font-bold text-lg">No reports found for @{currentUser}.</p>
               </div>
             ) : (
               <div className="space-y-4">
@@ -403,8 +417,15 @@ export default function App() {
 
             {success ? (
               <div className="text-center bg-white p-20 rounded-[4rem] border border-slate-200 shadow-2xl">
-                <h2 className="text-4xl font-black mb-4">Confirmed</h2>
-                <button onClick={() => setView('history')} className="w-full bg-slate-900 text-white py-6 rounded-[2rem] font-black text-xl shadow-2xl hover:bg-indigo-600 transition-all">Open Vault</button>
+                <CheckCircle2 className="w-16 h-16 text-emerald-500 mx-auto mb-6" />
+                <h2 className="text-4xl font-black mb-4">Report Submitted</h2>
+                <p className="text-slate-500 mb-8 font-medium">Your analysis has been staked and recorded.</p>
+                <button
+                  onClick={() => setView('history')}
+                  className="w-full bg-slate-900 text-white py-6 rounded-[2rem] font-black text-xl shadow-2xl hover:bg-indigo-600 transition-all"
+                >
+                  View My Reports
+                </button>
               </div>
             ) : (
               <form onSubmit={submitAnalysis} className="bg-white border border-slate-200 p-12 rounded-[3.5rem] shadow-sm space-y-12">
