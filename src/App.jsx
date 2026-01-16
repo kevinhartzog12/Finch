@@ -104,6 +104,42 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
+const handleAuth = async (e) => {
+    e.preventDefault();
+    setAuthError("");
+    const userRef = doc(db, "users", authInput.toLowerCase());
+
+    try {
+      const userSnap = await getDoc(userRef);
+
+      if (authMode === 'signup') {
+        if (userSnap.exists()) {
+          setAuthError("Username already taken.");
+        } else {
+          await setDoc(userRef, {
+            username: authInput.toLowerCase(),
+            balance: 1000,
+            createdAt: new Date().toISOString()
+          });
+          setCurrentUser(authInput.toLowerCase());
+          setBalance(1000);
+          setAuthMode(null);
+        }
+      } else {
+        if (userSnap.exists()) {
+          setCurrentUser(authInput.toLowerCase());
+          setBalance(userSnap.data().balance);
+          setAuthMode(null);
+        } else {
+          setAuthError("Account does not exist.");
+        }
+      }
+    } catch (err) {
+      setAuthError("Authentication failed.");
+      console.error(err);
+    }
+  };
+
   const submitAnalysis = async (e) => {
     e.preventDefault();
     if (!wallet || balance < 100) return;
