@@ -6,7 +6,10 @@ import {
   addDoc, 
   query, 
   orderBy,
-  onSnapshot 
+  onSnapshot,
+  doc,
+  getDoc,
+  setDoc 
 } from "firebase/firestore";
 import { 
   Gavel, 
@@ -78,6 +81,10 @@ export default function App() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [myPredictions, setMyPredictions] = useState([]);
+  const [currentUser, setCurrentUser] = useState(null); // Stores the username
+  const [authMode, setAuthMode] = useState(null); // 'login' or 'signup'
+  const [authInput, setAuthInput] = useState(""); // The text in the username field
+  const [authError, setAuthError] = useState("");
 
   // FETCH DATA FROM FIREBASE (REAL-TIME)
   useEffect(() => {
@@ -97,7 +104,34 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  const handleConnect = () => setWallet(wallet ? null : "0x71C7...976F");
+  <div className="flex items-center gap-4">
+  {currentUser ? (
+    <div className="flex items-center gap-3">
+      <span className="text-sm font-bold text-slate-600">@{currentUser}</span>
+      <button 
+        onClick={() => { setCurrentUser(null); setBalance(0); }} 
+        className="px-4 py-2 rounded-full text-xs font-bold bg-slate-100 text-slate-400 hover:text-red-500 transition-all"
+      >
+        Logout
+      </button>
+    </div>
+  ) : (
+    <>
+      <button 
+        onClick={() => { setAuthMode('login'); setAuthError(""); }}
+        className="text-sm font-bold text-slate-600 hover:text-indigo-600"
+      >
+        Login
+      </button>
+      <button 
+        onClick={() => { setAuthMode('signup'); setAuthError(""); }}
+        className="px-5 py-2.5 rounded-full text-sm font-bold bg-slate-900 text-white hover:bg-slate-800 transition-all"
+      >
+        Sign Up
+      </button>
+    </>
+  )}
+</div>
 
   const submitAnalysis = async (e) => {
     e.preventDefault();
