@@ -9,7 +9,8 @@ import {
   onSnapshot,
   doc,
   getDoc,
-  setDoc
+  setDoc,
+  deleteDoc
 } from "firebase/firestore";
 import {
   Gavel,
@@ -130,10 +131,21 @@ export default function App() {
         });
       }
       setIsVoteModalOpen(false);
-      setVoteForm({ company: "", description: "", summary: "", resolveBy: "" });
+      setVoteForm({ company: "", proposal: "", summary: "", resolveBy: "" });
     } catch (err) {
       console.error("Error saving vote:", err);
       alert("Failed to save vote.");
+    }
+  };
+
+  const deleteVote = async (id) => {
+    if (window.confirm("Are you sure you want to delete this vote? This cannot be undone.")) {
+      try {
+        await deleteDoc(doc(db, "votes", id));
+      } catch (err) {
+        console.error("Error deleting vote:", err);
+        alert("Failed to delete vote.");
+      }
     }
   };
 
@@ -336,8 +348,8 @@ export default function App() {
                 <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Short Description (for the card)</label>
                 <input
                   className="w-full border-2 border-slate-100 p-4 rounded-2xl outline-none focus:border-indigo-500 font-bold"
-                  value={voteForm.description}
-                  onChange={(e) => setVoteForm({ ...voteForm, description: e.target.value })}
+                  value={voteForm.proposal}
+                  onChange={(e) => setVoteForm({ ...voteForm, proposal: e.target.value })}
                   placeholder="e.g. Spin-off Cloud Division"
                   required
                 />
@@ -399,7 +411,7 @@ export default function App() {
                   <button
                     onClick={() => {
                       setEditingVote(null);
-                      setVoteForm({ company: "", description: "", summary: "", resolveBy: "" });
+                      setVoteForm({ company: "", proposal: "", summary: "", resolveBy: "" });
                       setIsVoteModalOpen(true);
                     }}
                     className="bg-indigo-600 text-white px-6 py-3 rounded-2xl font-black flex items-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
@@ -411,41 +423,62 @@ export default function App() {
 
               <div className="space-y-4">
                 {votes.map(vote => (
-                  <div key={vote.id} className="group relative bg-white border border-slate-200 p-8 rounded-[2rem] hover:border-indigo-400 hover:shadow-2xl hover:shadow-indigo-500/10 transition-all duration-300">
+                  <div
+                    key={vote.id}
+                    onClick={() => {
+                      setSelectedVote(vote);
+                      setView('submit');
+                      setSuccess(false);
+                      setRationale("");
+                    }}
+                    className="group relative bg-white border border-slate-200 p-8 rounded-[2rem] hover:border-indigo-400 hover:shadow-2xl hover:shadow-indigo-500/10 transition-all duration-300 cursor-pointer"
+                  >
                     <div className="flex justify-between items-start mb-4">
-                      <div className="cursor-pointer flex-1" onClick={() => { setSelectedVote(vote); setView('submit'); setSuccess(false); setRationale(""); }}>
-                        <h3 className="text-2xl font-black text-slate-900 group-hover:text-indigo-600 transition-colors">{vote.company}</h3>
-                        <p className="text-indigo-600 font-bold text-xs uppercase tracking-[0.2em] mt-1">{vote.description}</p>
+                      <div>
+                        <h3 className="text-2xl font-black text-slate-900 group-hover:text-indigo-600 transition-colors">
+                          {vote.company}
+                        </h3>
+                        {/* Changed vote.description to vote.proposal */}
+                        <p className="text-indigo-600 font-bold text-xs uppercase tracking-[0.2em] mt-1">
+                          {vote.proposal}
+                        </p>
                       </div>
 
-                      <div className="flex items-center gap-6">
-                        {/* ADMIN EDIT BUTTON */}
+                      <div className="flex items-center gap-4">
+                        {/* ADMIN TOOLS */}
                         {currentUser === 'admin' && (
-                          <button
-                            onClick={() => {
-                              setEditingVote(vote.id);
-                              setVoteForm({
-                                company: vote.company,
-                                description: vote.description,
-                                summary: vote.summary || "",
-                                resolveBy: vote.resolveBy || ""
-                              });
-                              setIsVoteModalOpen(true);
-                            }}
-                            className="px-4 py-2 text-xs font-black uppercase tracking-widest text-slate-400 hover:text-indigo-600 border border-slate-100 rounded-xl hover:border-indigo-100 transition-all"
-                          >
-                            Edit
-                          </button>
+                          <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              onClick={() => {
+                                setEditingVote(vote.id);
+                                setVoteForm({
+                                  company: vote.company,
+                                  proposal: vote.proposal, // Changed key
+                                  summary: vote.summary || "",
+                                  resolveBy: vote.resolveBy || ""
+                                });
+                                setIsVoteModalOpen(true);
+                              }}
+                              className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-indigo-600 border border-slate-100 rounded-xl hover:border-indigo-100 transition-all"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => deleteVote(vote.id)}
+                              className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-red-500 border border-slate-100 rounded-xl hover:border-red-100 transition-all"
+                            >
+                              Delete
+                            </button>
+                          </div>
                         )}
-                        <div className="text-right">
-                          <span className="text-3xl font-black text-slate-900">
-                            {vote.currentProbability || 50}%
-                          </span>
+
+                        <div className="text-right ml-4">
+                          <span className="text-3xl font-black text-slate-900">{vote.currentProbability || 50}%</span>
                           <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Market View</p>
                         </div>
                       </div>
                     </div>
-                    <p className="text-slate-500 leading-relaxed max-w-2xl">{vote.summary || vote.description}</p>
+                    <p className="text-slate-500 leading-relaxed max-w-2xl">{vote.summary || vote.proposal}</p>
                   </div>
                 ))}
               </div>
