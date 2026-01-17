@@ -102,6 +102,29 @@ export default function App() {
     return () => unsubscribe();
   }, [currentUser]); // Added currentUser here so it re-runs when you switch users
 
+  // Dedicated listener for the logged-in user's balance
+  useEffect(() => {
+    if (!currentUser) {
+      setBalance(0); // Reset balance on logout
+      return;
+    }
+
+    // Reference to the specific user's document
+    const userRef = doc(db, "users", currentUser);
+
+    // Listen for changes to THIS user only
+    const unsubscribe = onSnapshot(userRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const userData = docSnap.data();
+        setBalance(userData.balance); // Update the screen with the DB balance
+      }
+    }, (error) => {
+      console.error("Error fetching user balance:", error);
+    });
+
+    return () => unsubscribe();
+  }, [currentUser]);
+
   useEffect(() => {
     const q = query(collection(db, "votes"), orderBy("company", "asc"));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -171,10 +194,19 @@ export default function App() {
           setAuthMode(null);
         }
       } else {
+        // --- LOGIN LOGIC ---
         if (userSnap.exists()) {
+          const userData = userSnap.data();
+
+          // 1. Set the user
           setCurrentUser(authInput.toLowerCase());
-          setBalance(userSnap.data().balance);
+
+          // 2. Set the balance immediately from the database
+          setBalance(userData.balance);
+
+          // 3. Clear the modal
           setAuthMode(null);
+          setAuthInput(""); // Clear the input field for next time
         } else {
           setAuthError("Account does not exist.");
         }
@@ -309,7 +341,7 @@ export default function App() {
               )}
 
               <button type="submit" className="w-full bg-indigo-600 text-white py-5 rounded-2xl font-black text-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200">
-                {authMode === 'login' ? 'Login' : 'Claim 1,000 PRXY'}
+                {authMode === 'login' ? 'Login' : 'Register'}
               </button>
 
               <button
