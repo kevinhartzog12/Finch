@@ -41,30 +41,6 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-const MOCK_VOTES = [
-  {
-    id: 1,
-    company: "MegaCorp Inc.",
-    proposal: "Spin-off Cloud Division",
-    description: "Shareholder proposal to separate the high-growth Cloud entity to unlock value and streamline core operations.",
-    currentProbability: 32
-  },
-  {
-    id: 2,
-    company: "EcoEnergy Ltd.",
-    proposal: "Appoint ESG Specialist",
-    description: "Activist investor seeking to place a climate-risk expert on the board to oversee transition strategy.",
-    currentProbability: 68
-  },
-  {
-    id: 3,
-    company: "TechGiant Co.",
-    proposal: "Executive Clawback Policy",
-    description: "Mandate recovery of executive bonuses in the event of material financial restatements or misconduct.",
-    currentProbability: 45
-  }
-];
-
 const MOCK_LEADERS = [
   { rank: 1, name: "Alpha_Analyst", accuracy: 88, returns: "+12,400", color: "bg-amber-100 text-amber-600" },
   { rank: 2, name: "ProxyWhale", accuracy: 82, returns: "+9,100", color: "bg-slate-100 text-slate-600" },
@@ -85,7 +61,15 @@ export default function App() {
   const [authMode, setAuthMode] = useState(null); // 'login' or 'signup'
   const [authInput, setAuthInput] = useState(""); // The text in the username field
   const [authError, setAuthError] = useState("");
-
+  const [votes, setVotes] = useState([]);
+  const [isVoteModalOpen, setIsVoteModalOpen] = useState(false);
+  const [editingVote, setEditingVote] = useState(null); // Track if we are editing an existing vote
+  const [voteForm, setVoteForm] = useState({
+    company: "",
+    description: "",
+    summary: "",
+    resolveBy: ""
+  });
   // FETCH DATA FROM FIREBASE (REAL-TIME)
   useEffect(() => {
     // Only fetch if someone is logged in
@@ -116,6 +100,19 @@ export default function App() {
 
     return () => unsubscribe();
   }, [currentUser]); // Added currentUser here so it re-runs when you switch users
+
+  useEffect(() => {
+    const q = query(collection(db, "votes"), orderBy("company", "asc"));
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const votesData = [];
+      querySnapshot.forEach((doc) => {
+        votesData.push({ id: doc.id, ...doc.data() });
+      });
+      setVotes(votesData);
+    }, (error) => console.error("Error fetching votes:", error));
+
+    return () => unsubscribe();
+  }, []);
 
   const handleAuth = async (e) => {
     e.preventDefault();
@@ -296,25 +293,64 @@ export default function App() {
         {view === 'dashboard' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
             <div className="lg:col-span-2 space-y-8">
-              <div>
-                <h1 className="text-4xl font-black mb-2">Active Proxy Votes</h1>
-                <p className="text-slate-500 font-medium text-lg italic">Crowdsourced governance intelligence.</p>
+              <div className="flex justify-between items-end mb-8">
+                <div>
+                  <h1 className="text-4xl font-black mb-2">Active Proxy Votes</h1>
+                  <p className="text-slate-500 font-medium text-lg italic">Crowdsourced governance intelligence.</p>
+                </div>
+
+                {/* ONLY SHOW TO ADMIN */}
+                {currentUser === 'admin' && (
+                  <button
+                    onClick={() => {
+                      setEditingVote(null);
+                      setVoteForm({ company: "", description: "", summary: "", resolveBy: "" });
+                      setIsVoteModalOpen(true);
+                    }}
+                    className="bg-indigo-600 text-white px-6 py-3 rounded-2xl font-black flex items-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
+                  >
+                    + Create New Vote
+                  </button>
+                )}
               </div>
 
               <div className="space-y-4">
-                {MOCK_VOTES.map(vote => (
-                  <div key={vote.id} onClick={() => { setSelectedVote(vote); setView('submit'); setSuccess(false); setRationale(""); }} className="group bg-white border border-slate-200 p-8 rounded-[2rem] hover:border-indigo-400 hover:shadow-2xl hover:shadow-indigo-500/10 cursor-pointer transition-all duration-300">
+                {votes.map(vote => (
+                  <div key={vote.id} className="group relative bg-white border border-slate-200 p-8 rounded-[2rem] hover:border-indigo-400 hover:shadow-2xl hover:shadow-indigo-500/10 transition-all duration-300">
                     <div className="flex justify-between items-start mb-4">
-                      <div>
+                      <div className="cursor-pointer flex-1" onClick={() => { setSelectedVote(vote); setView('submit'); setSuccess(false); setRationale(""); }}>
                         <h3 className="text-2xl font-black text-slate-900 group-hover:text-indigo-600 transition-colors">{vote.company}</h3>
-                        <p className="text-indigo-600 font-bold text-xs uppercase tracking-[0.2em] mt-1">{vote.proposal}</p>
+                        <p className="text-indigo-600 font-bold text-xs uppercase tracking-[0.2em] mt-1">{vote.description}</p>
                       </div>
-                      <div className="text-right">
-                        <span className="text-3xl font-black text-slate-900">{vote.currentProbability}%</span>
-                        <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Market View</p>
+
+                      <div className="flex items-center gap-6">
+                        {/* ADMIN EDIT BUTTON */}
+                        {currentUser === 'admin' && (
+                          <button
+                            onClick={() => {
+                              setEditingVote(vote.id);
+                              setVoteForm({
+                                company: vote.company,
+                                description: vote.description,
+                                summary: vote.summary || "",
+                                resolveBy: vote.resolveBy || ""
+                              });
+                              setIsVoteModalOpen(true);
+                            }}
+                            className="px-4 py-2 text-xs font-black uppercase tracking-widest text-slate-400 hover:text-indigo-600 border border-slate-100 rounded-xl hover:border-indigo-100 transition-all"
+                          >
+                            Edit
+                          </button>
+                        )}
+                        <div className="text-right">
+                          <span className="text-3xl font-black text-slate-900">
+                            {vote.currentProbability || 50}%
+                          </span>
+                          <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Market View</p>
+                        </div>
                       </div>
                     </div>
-                    <p className="text-slate-500 leading-relaxed max-w-2xl">{vote.description}</p>
+                    <p className="text-slate-500 leading-relaxed max-w-2xl">{vote.summary || vote.description}</p>
                   </div>
                 ))}
               </div>
