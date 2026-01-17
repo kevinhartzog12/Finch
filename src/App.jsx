@@ -114,6 +114,29 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
+  const handleVoteSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      if (editingVote) {
+        // UPDATE existing vote
+        const voteRef = doc(db, "votes", editingVote);
+        await setDoc(voteRef, voteForm, { merge: true });
+      } else {
+        // CREATE new vote
+        await addDoc(collection(db, "votes"), {
+          ...voteForm,
+          currentProbability: 50, // Default starting point
+          createdAt: new Date().toISOString()
+        });
+      }
+      setIsVoteModalOpen(false);
+      setVoteForm({ company: "", description: "", summary: "", resolveBy: "" });
+    } catch (err) {
+      console.error("Error saving vote:", err);
+      alert("Failed to save vote.");
+    }
+  };
+
   const handleAuth = async (e) => {
     e.preventDefault();
     setAuthError("");
@@ -284,6 +307,78 @@ export default function App() {
               >
                 Cancel
               </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ADMIN CREATE/EDIT MODAL */}
+      {isVoteModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[110] flex items-center justify-center p-6">
+          <div className="bg-white rounded-[3rem] p-10 max-w-2xl w-full shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            <h2 className="text-3xl font-black mb-6">
+              {editingVote ? 'Edit Vote Event' : 'New Proxy Event'}
+            </h2>
+
+            <form onSubmit={handleVoteSubmit} className="space-y-6">
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Company Name</label>
+                <input
+                  className="w-full border-2 border-slate-100 p-4 rounded-2xl outline-none focus:border-indigo-500 font-bold"
+                  value={voteForm.company}
+                  onChange={(e) => setVoteForm({ ...voteForm, company: e.target.value })}
+                  placeholder="e.g. Apple Inc."
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Short Description (for the card)</label>
+                <input
+                  className="w-full border-2 border-slate-100 p-4 rounded-2xl outline-none focus:border-indigo-500 font-bold"
+                  value={voteForm.description}
+                  onChange={(e) => setVoteForm({ ...voteForm, description: e.target.value })}
+                  placeholder="e.g. Spin-off Cloud Division"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Detailed Summary</label>
+                <textarea
+                  className="w-full border-2 border-slate-100 p-4 rounded-2xl outline-none focus:border-indigo-500 font-medium min-h-[120px]"
+                  value={voteForm.summary}
+                  onChange={(e) => setVoteForm({ ...voteForm, summary: e.target.value })}
+                  placeholder="Explain the details of the proposal..."
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Resolve By Date</label>
+                  <input
+                    type="date"
+                    className="w-full border-2 border-slate-100 p-4 rounded-2xl outline-none focus:border-indigo-500 font-bold"
+                    value={voteForm.resolveBy}
+                    onChange={(e) => setVoteForm({ ...voteForm, resolveBy: e.target.value })}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-4 pt-4">
+                <button type="submit" className="flex-1 bg-indigo-600 text-white py-4 rounded-2xl font-black text-lg hover:bg-indigo-700 transition-all">
+                  {editingVote ? 'Save Changes' : 'Publish Vote'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsVoteModalOpen(false)}
+                  className="px-8 text-slate-400 font-bold hover:text-slate-600 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
             </form>
           </div>
         </div>
