@@ -10,7 +10,9 @@ import {
   doc,
   getDoc,
   setDoc,
-  deleteDoc
+  deleteDoc,
+  getDocs,
+  where
 } from "firebase/firestore";
 import {
   Gavel,
@@ -577,8 +579,8 @@ export default function App() {
                     }}
                     // This part changes the look of the card if it's resolved or if an admin is hovering
                     className={`relative p-8 rounded-[3rem] border transition-all ${vote.status === 'resolved'
-                        ? 'bg-slate-50 border-slate-100 opacity-80 cursor-default'
-                        : 'bg-white border-slate-200 hover:shadow-xl cursor-pointer'
+                      ? 'bg-slate-50 border-slate-100 opacity-80 cursor-default'
+                      : 'bg-white border-slate-200 hover:shadow-xl cursor-pointer'
                       }`}
                   >
                     <div className="flex justify-between items-start mb-4">
