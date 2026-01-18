@@ -638,9 +638,40 @@ export default function App() {
                   </div>
                 )}
                 <h2 className="text-4xl font-black mb-2">{selectedVote.company}</h2>
-                <div className="space-y-6">
-                  <span className="text-7xl font-black text-indigo-600 tabular-nums">{forecast}%</span>
-                  <input type="range" className="w-full h-2.5 bg-slate-100 rounded-full appearance-none cursor-pointer accent-indigo-600" value={forecast} onChange={(e) => setForecast(e.target.value)} />
+                <div className="bg-slate-50 p-8 rounded-[2.5rem] border border-slate-100">
+                  <div className="flex justify-between items-end mb-6">
+                    <div>
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 block mb-1">
+                        Probability Assessment
+                      </label>
+                      <p className="text-xs font-bold text-slate-500">How likely is this proposal to pass?</p>
+                    </div>
+                    <div className="text-right">
+                      {/* Note: using your 'forecast' variable here */}
+                      <span className="text-6xl font-black text-indigo-600 tabular-nums">{forecast}%</span>
+                      <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mt-1">Confidence in "FOR"</p>
+                    </div>
+                  </div>
+
+                  <input
+                    type="range"
+                    min="1"
+                    max="99"
+                    value={forecast}
+                    onChange={(e) => setForecast(e.target.value)}
+                    className="w-full h-4 bg-slate-200 rounded-full appearance-none cursor-pointer accent-indigo-600 mb-4"
+                  />
+
+                  <div className="flex justify-between px-2">
+                    <div className="text-left">
+                      <p className="text-sm font-black text-slate-900 leading-none">AGAINST</p>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight mt-1">0% Pass Chance</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-black text-slate-900 leading-none">FOR</p>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight mt-1">100% Pass Chance</p>
+                    </div>
+                  </div>
                 </div>
                 <textarea className="w-full border border-slate-200 p-8 rounded-[2.5rem] outline-none focus:border-indigo-500 transition-all text-lg leading-relaxed min-h-[200px]" value={rationale} onChange={(e) => setRationale(e.target.value)} placeholder="Provide your thesis..." required />
                 <button type="submit" disabled={isSubmitting || !currentUser} className="w-full bg-slate-900 text-white py-7 rounded-[2.5rem] font-black text-2xl hover:bg-indigo-600 transition-all disabled:bg-slate-200 shadow-xl">
