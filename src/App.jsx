@@ -58,6 +58,7 @@ export default function App() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [myPredictions, setMyPredictions] = useState([]);
+  const [isResolutionModalOpen, setIsResolutionModalOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(null); // Stores the username
   const [authMode, setAuthMode] = useState(null); // 'login' or 'signup'
   const [authInput, setAuthInput] = useState(""); // The text in the username field
@@ -67,9 +68,11 @@ export default function App() {
   const [editingVote, setEditingVote] = useState(null); // Track if we are editing an existing vote
   const [voteForm, setVoteForm] = useState({
     company: "",
-    description: "",
+    proposal: "",
     summary: "",
-    resolveBy: ""
+    resolveBy: "",
+    status: "active", // New: 'active' or 'resolved'
+    outcome: null     // New: 1 for PASSED, 0 for FAILED
   });
   // FETCH DATA FROM FIREBASE (REAL-TIME)
   useEffect(() => {
@@ -214,6 +217,58 @@ export default function App() {
     } catch (err) {
       setAuthError("Authentication failed.");
       console.error(err);
+    }
+  };
+
+  const finalizeResolution = async (outcomeValue) => {
+    if (!window.confirm("Are you sure? This will finalize scores for all users and close the market.")) return;
+
+    try {
+      // 1. Update the Vote Status to Resolved
+      const voteRef = doc(db, "votes", editingVote);
+      await setDoc(voteRef, {
+        status: 'resolved',
+        outcome: outcomeValue
+      }, { merge: true });
+
+      // 2. Fetch all predictions for this vote
+      const predsQuery = query(collection(db, "predictions"), where("voteId", "==", editingVote));
+      const predsSnap = await getDocs(predsQuery);
+
+      // 3. Loop through predictions and update Brier Scores
+      for (const predDoc of predsSnap.docs) {
+        const predData = predDoc.data();
+        const f = predData.forecast / 100; // Forecast as decimal (0.0 - 1.0)
+        const o = outcomeValue;             // Outcome (1 or 0)
+
+        // Brier Score Formula: (f - o)^2
+        const brierScore = Math.pow((f - o), 2);
+
+        // Update User Profile
+        const userRef = doc(db, "users", predData.username);
+        const userSnap = await getDoc(userRef);
+
+        if (userSnap.exists()) {
+          const userData = userSnap.data();
+          const currentAvg = userData.avgBrierScore || 0;
+          const currentCount = userData.resolvedVotesCount || 0;
+
+          // New Moving Average: ((oldAvg * oldCount) + newScore) / newCount
+          const newCount = currentCount + 1;
+          const newAvg = ((currentAvg * currentCount) + brierScore) / newCount;
+
+          await setDoc(userRef, {
+            avgBrierScore: newAvg,
+            resolvedVotesCount: newCount
+          }, { merge: true });
+        }
+      }
+
+      setIsResolutionModalOpen(false);
+      setEditingVote(null);
+    } catch (err) {
+      console.error("Resolution Error:", err);
+      alert("Failed to resolve market.");
     }
   };
 
@@ -362,6 +417,43 @@ export default function App() {
         </div>
       )}
 
+      {/* DEDICATED RESOLUTION MODAL */}
+      {isResolutionModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[120] flex items-center justify-center p-6">
+          <div className="bg-white rounded-[3rem] p-10 max-w-md w-full shadow-2xl text-center">
+            <div className="mb-8">
+              <h2 className="text-3xl font-black mb-2 text-slate-900">Resolve Market</h2>
+              <p className="text-slate-500 font-medium">Finalize outcome for <span className="text-indigo-600 font-bold">{voteForm.company}</span></p>
+            </div>
+
+            <div className="grid gap-4 mb-8">
+              <button
+                onClick={() => finalizeResolution(1)} // 1 = Passed
+                className="group p-6 rounded-2xl border-2 border-slate-100 hover:border-emerald-500 hover:bg-emerald-50 transition-all text-left"
+              >
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest group-hover:text-emerald-600">Outcome A</p>
+                <p className="text-2xl font-black text-slate-900">PROPOSAL PASSED</p>
+              </button>
+
+              <button
+                onClick={() => finalizeResolution(0)} // 0 = Failed
+                className="group p-6 rounded-2xl border-2 border-slate-100 hover:border-red-500 hover:bg-red-50 transition-all text-left"
+              >
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest group-hover:text-red-600">Outcome B</p>
+                <p className="text-2xl font-black text-slate-900">PROPOSAL FAILED</p>
+              </button>
+            </div>
+
+            <button
+              onClick={() => setIsResolutionModalOpen(false)}
+              className="text-slate-400 font-bold hover:text-slate-600 uppercase text-xs tracking-widest"
+            >
+              Go Back
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ADMIN CREATE/EDIT MODAL */}
       {isVoteModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[110] flex items-center justify-center p-6">
@@ -484,8 +576,20 @@ export default function App() {
 
                       <div className="flex items-center gap-4">
                         {/* ADMIN TOOLS */}
-                        {currentUser === 'admin' && (
+                        {currentUser === 'admin' && vote.status !== 'resolved' && (
                           <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+
+                            {/* 1. THE RESOLVE BUTTON */}
+                            <button
+                              onClick={() => {
+                                setEditingVote(vote.id);
+                                setVoteForm({ ...vote }); // This copies the vote data into our form
+                                setIsResolutionModalOpen(true); // This "turns on" the popup window
+                              }}
+                              className="px-4 py-2 text-[10px] font-black uppercase tracking-widest bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-xl hover:bg-emerald-500 hover:text-white transition-all"
+                            >
+                              Resolve
+                            </button>
                             <button
                               onClick={() => {
                                 setEditingVote(vote.id);
