@@ -68,6 +68,7 @@ export default function App() {
   const [votes, setVotes] = useState([]);
   const [isVoteModalOpen, setIsVoteModalOpen] = useState(false);
   const [editingVote, setEditingVote] = useState(null); // Track if we are editing an existing vote
+  const [userStats, setUserStats] = useState(null);
   const [voteForm, setVoteForm] = useState({
     company: "",
     proposal: "",
@@ -122,6 +123,7 @@ export default function App() {
       if (docSnap.exists()) {
         const userData = docSnap.data();
         setBalance(userData.balance); // Update the screen with the DB balance
+        setUserStats(userData); // Add this line to store the Brier Score and counts
       }
     }, (error) => {
       console.error("Error fetching user balance:", error);
@@ -301,6 +303,7 @@ export default function App() {
     try {
       // 1. Record the prediction
       await addDoc(collection(db, "predictions"), {
+        voteId: selectedVote.id,
         username: currentUser, // Track who made it
         company: selectedVote.company,
         proposal: selectedVote.proposal,
@@ -325,6 +328,9 @@ export default function App() {
       setIsSubmitting(false);
       alert("Error processing stake. Try again.");
     }
+
+
+
   };
 
   return (
@@ -583,6 +589,21 @@ export default function App() {
                       : 'bg-white border-slate-200 hover:shadow-xl cursor-pointer'
                       }`}
                   >
+                    {/* RESOLUTION STATUS BADGE */}
+                    {vote.status === 'resolved' && (
+                      <div className="mb-6 flex justify-between items-center border-b border-slate-100 pb-4">
+                        <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.15em] ${vote.outcome === 1
+                            ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                            : 'bg-red-100 text-red-700 border border-red-200'
+                          }`}>
+                          {vote.outcome === 1 ? 'Outcome: PROPOSAL PASSED' : 'Outcome: PROPOSAL FAILED'}
+                        </span>
+                        <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest italic">
+                          Closed Market
+                        </span>
+                      </div>
+                    )}
+
                     <div className="flex justify-between items-start mb-4">
                       <div>
                         <h3 className="text-2xl font-black text-slate-900 group-hover:text-indigo-600 transition-colors">
@@ -667,10 +688,14 @@ export default function App() {
                       </div>
                     </div>
                     <div className="bg-white/10 p-4 rounded-2xl backdrop-blur-md border border-white/10">
-                      <p className="text-[10px] text-indigo-200 uppercase font-black mb-1 tracking-tighter">Accuracy</p>
+                      <p className="text-[10px] text-indigo-200 uppercase font-black mb-1 tracking-tighter">Brier Score</p>
                       <div className="flex items-center gap-2">
                         <TrendingUp className="w-4 h-4 text-emerald-300" />
-                        <p className="text-xl font-bold">{currentUser ? '74%' : '—'}</p>
+                        <p className="text-xl font-bold">
+                          {userStats?.resolvedVotesCount > 0
+                            ? userStats.avgBrierScore.toFixed(3)
+                            : "—"}
+                        </p>
                       </div>
                     </div>
                   </div>
