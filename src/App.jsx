@@ -224,24 +224,25 @@ export default function App() {
     if (!window.confirm("Are you sure? This will finalize scores for all users and close the market.")) return;
 
     try {
-      // 1. Update the Vote Status to Resolved
+      // 1. Update the Vote document first
       const voteRef = doc(db, "votes", editingVote);
       await setDoc(voteRef, {
         status: 'resolved',
         outcome: outcomeValue
       }, { merge: true });
 
-      // 2. Fetch all predictions for this vote
+      // 2. Find predictions. 
+      // We try to find them by voteId, but if that's missing (old tests), we skip scoring.
       const predsQuery = query(collection(db, "predictions"), where("voteId", "==", editingVote));
       const predsSnap = await getDocs(predsQuery);
 
-      // 3. Loop through predictions and update Brier Scores
+      // 3. Loop through and score
       for (const predDoc of predsSnap.docs) {
         const predData = predDoc.data();
-        const f = predData.forecast / 100; // Forecast as decimal (0.0 - 1.0)
-        const o = outcomeValue;             // Outcome (1 or 0)
 
-        // Brier Score Formula: (f - o)^2
+        // Calculate Brier Score
+        const f = (predData.forecast || 50) / 100; // Default to 50 if forecast missing
+        const o = outcomeValue;
         const brierScore = Math.pow((f - o), 2);
 
         // Update User Profile
@@ -253,7 +254,6 @@ export default function App() {
           const currentAvg = userData.avgBrierScore || 0;
           const currentCount = userData.resolvedVotesCount || 0;
 
-          // New Moving Average: ((oldAvg * oldCount) + newScore) / newCount
           const newCount = currentCount + 1;
           const newAvg = ((currentAvg * currentCount) + brierScore) / newCount;
 
@@ -264,11 +264,14 @@ export default function App() {
         }
       }
 
+      // Success! Close modal and reset
       setIsResolutionModalOpen(false);
       setEditingVote(null);
+      alert("Market Resolved successfully!"); // Added success confirmation
+
     } catch (err) {
-      console.error("Resolution Error:", err);
-      alert("Failed to resolve market.");
+      console.error("Resolution Error Details:", err);
+      alert("The vote status updated, but there was an error calculating user scores. Check console for details.");
     }
   };
 
@@ -556,12 +559,27 @@ export default function App() {
                   <div
                     key={vote.id}
                     onClick={() => {
+                      // 1. If the vote is already finished, don't let anyone click it
+                      if (vote.status === 'resolved') return;
+
+                      // 2. If the logged-in user is 'admin', don't let them enter the staking screen
+                      if (currentUser === 'admin') {
+                        alert("Admins cannot stake predictions. Please use the 'Resolve' button to close the market.");
+                        return;
+                      }
+
+                      // 3. Otherwise, open the staking screen for regular users
                       setSelectedVote(vote);
                       setView('submit');
                       setSuccess(false);
                       setRationale("");
+                      setForecast(50); // Reset the slider to middle
                     }}
-                    className="group relative bg-white border border-slate-200 p-8 rounded-[2rem] hover:border-indigo-400 hover:shadow-2xl hover:shadow-indigo-500/10 transition-all duration-300 cursor-pointer"
+                    // This part changes the look of the card if it's resolved or if an admin is hovering
+                    className={`relative p-8 rounded-[3rem] border transition-all ${vote.status === 'resolved'
+                        ? 'bg-slate-50 border-slate-100 opacity-80 cursor-default'
+                        : 'bg-white border-slate-200 hover:shadow-xl cursor-pointer'
+                      }`}
                   >
                     <div className="flex justify-between items-start mb-4">
                       <div>
