@@ -220,13 +220,19 @@ export default function App() {
   const submitAnalysis = async (e) => {
     e.preventDefault();
 
-    // Check for user and funds
-    if (!currentUser) {
-      alert("Please login to stake.");
+    // Check if the user already has a report for THIS specific vote
+    const hasAlreadyVoted = myPredictions.some(p =>
+      p.company === selectedVote.company &&
+      p.proposal === selectedVote.proposal
+    );
+
+    if (hasAlreadyVoted) {
+      alert("You have already submitted an analysis for this proxy vote. You can only stake once per event.");
       return;
     }
+
     if (balance < 100) {
-      alert("Insufficient funds! You need at least 100 PRXY.");
+      alert("Insufficient PRXY balance to stake analysis.");
       return;
     }
 
@@ -295,13 +301,13 @@ export default function App() {
             ) : (
               <>
                 <button
-                  onClick={() => { setAuthMode('login'); setAuthError(""); }}
-                  className="text-sm font-bold text-slate-600 hover:text-indigo-600"
+                  onClick={() => { setAuthMode('login'); setAuthError(""); setAuthInput(""); }} // Add setAuthInput("")
+                  className="..."
                 >
                   Login
                 </button>
                 <button
-                  onClick={() => { setAuthMode('signup'); setAuthError(""); }}
+                  onClick={() => { setAuthMode('signup'); setAuthInput(""); setAuthError(""); }}
                   className="px-5 py-2.5 rounded-full text-sm font-bold bg-slate-900 text-white hover:bg-slate-800 transition-all"
                 >
                   Sign Up
